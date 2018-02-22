@@ -27,7 +27,7 @@ clean:
 
 
 
-GO_VERSION ?= 1.9.4
+GO_VERSION ?= 1.10
 ETCD_VERSION ?= $(shell git rev-parse --short HEAD || echo "GitNotFound")
 
 TEST_SUFFIX = $(shell date +%s | base64 | head -c 15)
@@ -418,7 +418,7 @@ docker-dns-srv-test-certs-wildcard-run:
 #   make build-etcd-test-proxy -f ./hack/scripts-dev/Makefile
 
 build-etcd-test-proxy:
-	go build -v -o ./bin/etcd-test-proxy ./cmd/tools/etcd-test-proxy
+	go build -v -o ./bin/etcd-test-proxy ./tools/etcd-test-proxy
 
 
 
