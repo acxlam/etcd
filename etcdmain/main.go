@@ -34,7 +34,7 @@ func Main() {
 			cmd = "grpc-proxy"
 		}
 		switch cmd {
-		case "gateway", "grpc-proxy":
+		case "gateway", "grpc-proxy", "z-proxy":
 			if err := rootCmd.Execute(); err != nil {
 				fmt.Fprint(os.Stderr, err)
 				os.Exit(1)
