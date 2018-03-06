@@ -42,7 +42,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 	"encoding/json"
-	"strings"
 )
 
 func init() {
@@ -174,16 +173,9 @@ func startZProxy(cmd *cobra.Command, args []string) {
 	for zone, endpoints := range bootstrapData {
 		// create remote clients if it is not local
 
-		if strings.Compare(zone, grpcProxyNamespace ) == 0 {
-			plog.Infof("use bootstrap client %s", zone)
-			readerClients[index] = client
-		} else {
-			plog.Infof("create client for %s", zone)
-			readerClient := mustRemoteClient(endpoints)
-			readerClient.KV = namespace.NewKV(readerClient.KV, zone)
-			readerClient.Watcher = namespace.NewWatcher(readerClient.Watcher, zone)
-			readerClients[index] = readerClient
-		}
+		plog.Infof("create client for %s", zone)
+		readerClient := mustRemoteClient(endpoints)
+		readerClients[index] = readerClient
 
 		index++
 	}
@@ -261,8 +253,8 @@ func newZProxyServer(client *clientv3.Client,   readerClients *[]*clientv3.Clien
 		client.KV, _, _ = leasing.NewKV(client, grpcProxyLeasing)
 	}
 
-	kvp, _ := grpcproxy.NewZKvProxy(client, readerClients)
-	//watchp, _ := grpcproxy.NewZWatchProxy(client)
+	zkvp, _ := grpcproxy.NewZKvProxy(client, readerClients)
+	watchp, _ := grpcproxy.NewZWatchProxy(readerClients)
 	if grpcProxyResolverPrefix != "" {
 		grpcproxy.Register(client, grpcProxyResolverPrefix, grpcProxyAdvertiseClientURL, grpcProxyResolverTTL)
 	}
@@ -279,8 +271,8 @@ func newZProxyServer(client *clientv3.Client,   readerClients *[]*clientv3.Clien
 		grpc.MaxConcurrentStreams(math.MaxUint32),
 	)
 
-	pb.RegisterKVServer(server, kvp)
-	//pb.RegisterWatchServer(server, watchp)
+	pb.RegisterKVServer(server, zkvp)
+	pb.RegisterWatchServer(server, watchp)
 	pb.RegisterClusterServer(server, clusterp)
 	pb.RegisterLeaseServer(server, leasep)
 	pb.RegisterMaintenanceServer(server, mainp)

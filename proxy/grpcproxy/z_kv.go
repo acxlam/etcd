@@ -26,8 +26,8 @@ import (
 type zKvProxy struct {
 
 	kvProxy
-	remoteClients *[]*clientv3.Client
-	numClusters int
+	readerClients *[]*clientv3.Client
+	numClusters   int
 }
 
 func NewZKvProxy(c *clientv3.Client,  readerClients *[]*clientv3.Client) (pb.KVServer, <-chan struct{}) {
@@ -38,8 +38,8 @@ func NewZKvProxy(c *clientv3.Client,  readerClients *[]*clientv3.Client) (pb.KVS
 			kv:c.KV,
 			cache:cache.NewCache(cache.DefaultMaxEntries),
 		},
-		remoteClients:readerClients,
-		numClusters:len(*readerClients),
+		readerClients: readerClients,
+		numClusters:   len(*readerClients),
 	}
 	donec := make(chan struct{})
 	close(donec)
@@ -63,21 +63,18 @@ func (p *zKvProxy) getRemoteResultList(ctx context.Context, r *pb.RangeRequest) 
 	wg.Add(p.numClusters)
 
 
-	for i, remoteClientTemp := range *(p.remoteClients){
+	for i, remoteClient := range *(p.readerClients){
 
-		index := i
-		remoteClient := remoteClientTemp
-
-		go func(){
+		go func(i int, remoteClient *clientv3.Client){
 
 			resp, err := remoteClient.KV.Do(ctx, RangeRequestToOp(r))
-			resultList[index] = &OpResponseStruct{
+			resultList[i] = &OpResponseStruct{
 				resp: resp,
 				err: err,
 			}
 
 			wg.Done() // countdown
-		}()
+		}(i, remoteClient)
 	}
 
 	wg.Wait()
